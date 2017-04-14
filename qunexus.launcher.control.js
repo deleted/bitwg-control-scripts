@@ -5,8 +5,6 @@ Copyright 2014 Evan Bogunia_____evanbeta@keithmcmillen.com
 
 */
 
-
-
 //Load the bitwig API, obviously.
 loadAPI(2);
 
@@ -31,8 +29,9 @@ var HIGHEST_CC = 119;
 var LOWEST_CC = 1;
 var trackBank;
 var launcherClips = {};
+var clipsPlaying = [];
 
-
+var CLIP_LAUNCH_PROBABILITY = 0.33;
 // Define a list of note numbers
 var WHITE_KEY_VALUES = [
   48, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65, 67, 69, 71, 72
@@ -100,6 +99,16 @@ function init()
         }
       })(trackIdx)
     );
+
+    clipsPlaying.push([]);
+    slotBank.addIsPlayingObserver(
+      (function(trackIdx){
+        return function (slotIdx, isPlaying) {
+          clipsPlaying[trackIdx][slotIdx] = isPlaying;
+        }
+      })(trackIdx)
+    );
+
   }
 
 }
@@ -116,13 +125,25 @@ function onMidiPort1(status, data1, data2)
     println("note" + data1 + " " + data2);
     var note = data1;
     var velocity = data2;
-    var idx = WHITE_KEY_VALUES.indexOf(note);
-    println("Fetching track "+idx);
-    var track = trackBank.getChannel(idx);
-    if (track != null) {
-      track.playNote(note, velocity);
+    if (WHITE_KEY_VALUES.indexOf(note) >= 0) {
+      var idx = WHITE_KEY_VALUES.indexOf(note);
+      println("Fetching track "+idx);
+      var track = trackBank.getChannel(idx);
+      if (track != null) {
+        track.playNote(note, velocity);
+      }
+    } else if (BLACK_KEY_VALUES.indexOf(note) >= 0) {
+      println("Black Key: "+note);
+      if (note == 70) {
+        // "play" Key
+        playSomething();
+      } else if (note == 68) {
+        stopAllClips();
+      }
     }
   }
+
+
 
 
 	if(status == 233)
@@ -180,6 +201,39 @@ function onSysexPort3(data)
 function exit()
 {
 	println("exit.");
+}
+
+//-----Application Code------//
+
+function playSomething() {
+  for(var i=0; i<WHITE_KEY_VALUES.length; i++) {
+    playRandomClipOrStop(i);
+  }
+}
+
+function isTrackPlaying(trackIdx){
+  // Return true if any of the clips we're tracking in clipsPlaying are marked as playing.
+  var trackClips = clipsPlaying[trackIdx];
+  return trackClips.some(function(x){ return x === true });
+}
+
+function playRandomClipOrStop(trackIdx) {
+    var track = trackBank.getChannel(trackIdx);
+    var slots = track.clipLauncherSlotBank();
+    var availableClips = launcherClips[trackIdx];
+    if ( isTrackPlaying(trackIdx) && Math.random() < 0.25) {
+      println("Stopping track "+trackIdx);
+      track.stop();
+    } else if (availableClips.length > 0 && Math.random() < CLIP_LAUNCH_PROBABILITY) {
+      var randomClipIdx = availableClips[Math.floor(Math.random()*availableClips.length)];
+      println("Play track "+trackIdx+" clip "+randomClipIdx);
+      slots.launch(randomClipIdx);
+    }
+}
+
+function stopAllClips(){
+  println("Stop All Clips");
+  trackBank.getClipLauncherScenes().stop();
 }
 
 //--------------------------------- Interfaces --------------------------------//
