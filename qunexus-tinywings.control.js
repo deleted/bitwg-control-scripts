@@ -57,11 +57,8 @@ function indexedFunction(index, f) {
   }
 }
 
-var ledControlPort = host.getMidiOutPort(0);
-function setLedStatus(onOff, keyNumber, brightness) {
-  var status = onOff ? 0x90 : 0x80;
-  ledControlPort.sendMidi(status, keyNumber, brightness);
-}
+var ledControlPort;
+var setLedStatus;
 
 function init()
 {
@@ -73,6 +70,11 @@ function init()
 	host.getMidiInPort(1).setSysexCallback(onSysexPort2);
 	host.getMidiInPort(2).setSysexCallback(onSysexPort3);
 
+ledControlPort = host.getMidiOutPort(0);
+setLedStatus = function(onOff, keyNumber, brightness) {
+  var status = onOff ? 0x90 : 0x80;
+  ledControlPort.sendMidi(status, keyNumber, brightness);
+}
 
 	//-------- Note Inputs (see REF below for argument details
 	noteIn = host.getMidiInPort(0).createNoteInput("QuNexus Port 1");
