@@ -40,6 +40,13 @@ var BLACK_KEY_VALUES = [
   49, 51, 54, 56, 58, 61, 63, 66, 68, 70
 ];
 
+// Fill an array with -1's, which can be used to disable note pass-through
+// in MIDI handlers.
+var DISABLE_NOTES_TRANSLATION_TABLE = [];
+for (var i=0; i < 128; i++) {
+  DISABLE_NOTES_TRANSLATION_TABLE[i] = -1;
+}
+
 //------------------------------------ Init -----------------------------------//
 function indexedFunction(index, f) {
   return function(value) {
@@ -59,6 +66,8 @@ function init()
 	//-------- Note Inputs (see REF below for argument details
 	noteIn = host.getMidiInPort(0).createNoteInput("QuNexus Port 1");
 	noteIn.setShouldConsumeEvents(false);
+  noteIn.setKeyTranslationTable(DISABLE_NOTES_TRANSLATION_TABLE);  // Setting this totally disables note pass-through to the audio engine.
+
 	noteIn2 = host.getMidiInPort(1).createNoteInput("QuNexus Port 2", "80????", "90????");
 	noteIn3 = host.getMidiInPort(2).createNoteInput("QuNexus Port 3", "80????", "90????");
 
