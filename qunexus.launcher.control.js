@@ -40,6 +40,8 @@ var WHITE_KEY_VALUES = [
 var BLACK_KEY_VALUES = [
   49, 51, 54, 56, 58, 61, 63, 66, 68, 70
 ];
+var STOP = 68;
+var PLAY = 70;
 
 // Fill an array with -1's, which can be used to disable note pass-through
 // in MIDI handlers.
@@ -133,6 +135,9 @@ function init()
 
   }
 
+  // Turn on STOP and PLAY buttons so users know they are an affordance
+  setLedStatus(true, STOP, 0x40);
+  setLedStatus(true, PLAY, 0x40);
 }
 
 //--------------------------- MIDI Callbacks / Port ---------------------------//
@@ -152,14 +157,15 @@ function onMidiPort1(status, data1, data2)
       println("Fetching track "+idx);
       var track = trackBank.getChannel(idx);
       if (track != null) {
-        track.playNote(note, velocity);
+        // track.playNote(note, velocity);
+        toggleTrack(idx);
       }
     } else if (BLACK_KEY_VALUES.indexOf(note) >= 0) {
       println("Black Key: "+note);
-      if (note == 70) {
+      if (note == PLAY) {
         // "play" Key
         playSomething();
-      } else if (note == 68) {
+      } else if (note == STOP) {
         stopAllClips();
       }
     }
@@ -263,6 +269,18 @@ function playRandomClipOrStop(trackIdx) {
     } else if (availableClips.length > 0 && Math.random() < CLIP_LAUNCH_PROBABILITY) {
       playRandomClip(trackIdx);
     }
+}
+
+function toggleTrack(trackIdx) {
+
+  // Cheat to toggle LED immediately, regardless of launch quantization.
+  setLedStatus(!isTrackPlaying(trackIdx), WHITE_KEY_VALUES[trackIdx], 0x40);
+
+  if (isTrackPlaying(trackIdx)) {
+    stopTrack(trackIdx)
+  } else {
+    playRandomClip(trackIdx);
+  }
 }
 
 function stopAllClips(){
