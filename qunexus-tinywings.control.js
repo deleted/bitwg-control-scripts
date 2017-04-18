@@ -32,7 +32,10 @@ var trackBank;
 var launcherClips = {};
 var clipsPlaying = [];
 
-var CLIP_LAUNCH_PROBABILITY = 0.33;
+// In instant gratification mode, LEDs change when you hit the button, instead of when clips actually start and stop
+var INSTANT_GRATIFICATION_MODE = true;
+var CLIP_LAUNCH_PROBABILITY = 0.30;
+
 // Define a list of note numbers
 var WHITE_KEY_VALUES = [
   48, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65, 67, 69, 71, 72
@@ -267,18 +270,27 @@ function stopTrack(trackIdx) {
 
 function playRandomClipOrStop(trackIdx) {
     var availableClips = launcherClips[trackIdx];
+    var trackState = isTrackPlaying(trackIdx);
     if ( isTrackPlaying(trackIdx) && Math.random() < 0.25) {
       println("Stopping track "+trackIdx);
       stopTrack(trackIdx);
+      trackState = false;
     } else if (availableClips.length > 0 && Math.random() < CLIP_LAUNCH_PROBABILITY) {
       playRandomClip(trackIdx);
+      trackState = true;
+    }
+
+    if (INSTANT_GRATIFICATION_MODE) {
+      setLedStatus(trackState, WHITE_KEY_VALUES[trackIdx], 0x40);
     }
 }
 
 function toggleTrack(trackIdx) {
 
-  // Cheat to toggle LED immediately, regardless of launch quantization.
-  setLedStatus(!isTrackPlaying(trackIdx), WHITE_KEY_VALUES[trackIdx], 0x40);
+  if (INSTANT_GRATIFICATION_MODE) {
+    // Cheat to toggle LED immediately, regardless of launch quantization.
+    setLedStatus(!isTrackPlaying(trackIdx), WHITE_KEY_VALUES[trackIdx], 0x40);
+  }
 
   if (isTrackPlaying(trackIdx)) {
     stopTrack(trackIdx)
