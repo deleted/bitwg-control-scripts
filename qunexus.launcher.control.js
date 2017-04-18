@@ -234,6 +234,7 @@ function playRandomClipOrStop(trackIdx) {
 function stopAllClips(){
   println("Stop All Clips");
   trackBank.getClipLauncherScenes().stop();
+  transport.stop();
 }
 
 //--------------------------------- Interfaces --------------------------------//
