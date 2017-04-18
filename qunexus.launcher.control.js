@@ -23,6 +23,7 @@ host.addDeviceNameBasedDiscoveryPair(midiIns, midiOuts);
 //Define/set sysex call/response (deprecated, included for good measure)
 host.defineSysexDiscovery("F0 7E 7F 06 01 F7", "F0 7E 00 06 02 00 01 5F 19 00 00 00 ?? ?? ?? ?? ?? ?? F7");
 
+
 //Declare some global vars for a few of the interface types defined in the API
 var application, arranger, mixer, transport;
 var HIGHEST_CC = 119;
@@ -53,6 +54,13 @@ function indexedFunction(index, f) {
     f(index, value);
   }
 }
+
+var ledControlPort = host.getMidiOutPort(0);
+function setLedStatus(onOff, keyNumber, brightness) {
+  var status = onOff ? 0x90 : 0x80;
+  ledControlPort.sendMidi(status, keyNumber, brightness);
+}
+
 function init()
 {
 	//-------- Set MIDI callbacks / port
@@ -63,7 +71,6 @@ function init()
 	host.getMidiInPort(1).setSysexCallback(onSysexPort2);
 	host.getMidiInPort(2).setSysexCallback(onSysexPort3);
 
-  var ledControlPort = host.getMidiOutPort(0);
 
 	//-------- Note Inputs (see REF below for argument details
 	noteIn = host.getMidiInPort(0).createNoteInput("QuNexus Port 1");
@@ -118,9 +125,8 @@ function init()
           clipsPlaying[trackIdx][slotIdx] = isPlaying;
 
           var keyNumber = WHITE_KEY_VALUES[trackIdx];
-          var onOff = isPlaying ? 0x90 : 0x80;
           var brightness = 0x40;
-          ledControlPort.sendMidi(onOff, keyNumber, brightness);
+          setLedStatus(isPlaying, keyNumber, brightness);
         }
       })(trackIdx)
     );
@@ -233,17 +239,29 @@ function isTrackPlaying(trackIdx){
   return trackClips.some(function(x){ return x === true });
 }
 
-function playRandomClipOrStop(trackIdx) {
+function playRandomClip(trackIdx) {
+  var availableClips = launcherClips[trackIdx];
+  if (availableClips.length > 0) {
     var track = trackBank.getChannel(trackIdx);
     var slots = track.clipLauncherSlotBank();
+    var randomClipIdx = availableClips[Math.floor(Math.random()*availableClips.length)];
+    println("Play track "+trackIdx+" clip "+randomClipIdx);
+    slots.launch(randomClipIdx);
+  }
+}
+
+function stopTrack(trackIdx) {
+  var track = trackBank.getChannel(trackIdx);
+  track.stop();
+}
+
+function playRandomClipOrStop(trackIdx) {
     var availableClips = launcherClips[trackIdx];
     if ( isTrackPlaying(trackIdx) && Math.random() < 0.25) {
       println("Stopping track "+trackIdx);
-      track.stop();
+      stopTrack(trackIdx);
     } else if (availableClips.length > 0 && Math.random() < CLIP_LAUNCH_PROBABILITY) {
-      var randomClipIdx = availableClips[Math.floor(Math.random()*availableClips.length)];
-      println("Play track "+trackIdx+" clip "+randomClipIdx);
-      slots.launch(randomClipIdx);
+      playRandomClip(trackIdx);
     }
 }
 
