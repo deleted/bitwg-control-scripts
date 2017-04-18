@@ -63,6 +63,8 @@ function init()
 	host.getMidiInPort(1).setSysexCallback(onSysexPort2);
 	host.getMidiInPort(2).setSysexCallback(onSysexPort3);
 
+  var ledControlPort = host.getMidiOutPort(0);
+
 	//-------- Note Inputs (see REF below for argument details
 	noteIn = host.getMidiInPort(0).createNoteInput("QuNexus Port 1");
 	noteIn.setShouldConsumeEvents(false);
@@ -114,6 +116,11 @@ function init()
       (function(trackIdx){
         return function (slotIdx, isPlaying) {
           clipsPlaying[trackIdx][slotIdx] = isPlaying;
+
+          var keyNumber = WHITE_KEY_VALUES[trackIdx];
+          var onOff = isPlaying ? 0x90 : 0x80;
+          var brightness = 0x40;
+          ledControlPort.sendMidi(onOff, keyNumber, brightness);
         }
       })(trackIdx)
     );
