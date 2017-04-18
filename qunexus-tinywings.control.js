@@ -9,7 +9,7 @@ Copyright 2014 Evan Bogunia_____evanbeta@keithmcmillen.com
 loadAPI(2);
 
 //Define/set our controller properties [ company, device, version, uuid ]
-host.defineController("KMI", "QuNexusInsect", "1.0", "36f2e190-1f3e-11e7-9598-0800200c9a662");
+host.defineController("Tedward", "QuNexusInsect", "1.0", "36f2e190-1f3e-11e7-9598-0800200c9a662");
 host.defineMidiPorts(3, 3);
 
 //Define/set input/output port names (both i/o are the same)
@@ -50,13 +50,15 @@ for (var i=0; i < 128; i++) {
   DISABLE_NOTES_TRANSLATION_TABLE[i] = -1;
 }
 
-//------------------------------------ Init -----------------------------------//
 function indexedFunction(index, f) {
   return function(value) {
     f(index, value);
   }
 }
 
+//------------------------------------ Init -----------------------------------//
+// These need to be declared globally, but initialized in init()
+// Otherwise bitwig will silently fail to load the script.
 var ledControlPort;
 var setLedStatus;
 
