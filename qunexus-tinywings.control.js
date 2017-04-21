@@ -35,7 +35,7 @@ var clipsPlaying = [];
 // In instant gratification mode, LEDs change when you hit the button, instead of when clips actually start and stop
 var INSTANT_GRATIFICATION_MODE = true;
 var CLIP_LAUNCH_PROBABILITY = 0.30;
-var NUM_EFFECTS = 4;
+var NUM_EFFECTS = 6;
 var FX_MODULATION_AMOUNT = 0.2;
 
 // Define a list of note numbers
@@ -49,7 +49,7 @@ var STOP = 68;
 var PLAY = 70;
 var FX_PLUS = null;
 var FX_MINUS = null;
-var FX_BUMPS = BLACK_KEY_VALUES.slice(0,NUM_EFFECTS);
+var FX_KEYS = BLACK_KEY_VALUES.slice(0,NUM_EFFECTS);
 
 // Fill an array with -1's, which can be used to disable note pass-through
 // in MIDI handlers.
@@ -70,6 +70,7 @@ function indexedFunction(index, f) {
 var ledControlPort;
 var setLedStatus;
 var masterTrackControls;
+var fxStates; // vector of states for the fx enable/disable feature
 
 function init()
 {
@@ -148,6 +149,14 @@ function init()
 
     //Master track macros.
     masterTrackControls = getMasterMacros();
+
+    // Initialize FX states
+    fxStates = [];
+    for (var i=0; i<FX_KEYS.length; i++) {
+      fxStates.push(false);
+      modulateSingleEffect(i, -1);
+      setLedStatus(false, FX_KEYS[i], 0x00);
+    }
   }
 
   // Light up the black key affordances
@@ -156,7 +165,7 @@ function init()
     PLAY,
     // FX_PLUS,
     // FX_MINUS
-  ] + FX_BUMPS;
+  ]
   for (var i=0; i<affordances.length; i++) {
     setLedStatus(true, affordances[i], 0x40);
   }
@@ -189,14 +198,15 @@ function onMidiPort1(status, data1, data2)
         playSomething();
       } else if (note == STOP) {
         stopAllClips();
-        modulateMasterFX(0);
+        clearEffects();
       } else if (note == FX_PLUS) {
         modulateMasterFX(0.2);
       } else if (note == FX_MINUS) {
         modulateMasterFX(-0.2);
-      } else if (FX_BUMPS.indexOf(note) >= 0) {
-        var idx = FX_BUMPS.indexOf(note);
-        modulateSingleEffect(idx, FX_MODULATION_AMOUNT);
+      } else if (FX_KEYS.indexOf(note) >= 0) {
+        // var idx = FX_KEYS.indexOf(note);
+        // modulateSingleEffect(idx, FX_MODULATION_AMOUNT);
+        toggleEffect(note);
       }
     }
   }
@@ -360,13 +370,31 @@ function modulateMasterFX(amount){
 function modulateSingleEffect(idx, amount) {
   var control = masterTrackControls[idx];
   if (amount == 0) {
-    newVal = 0;
-    control.set(newVal);
+    control.set(0);
+  } else if (amount === true) {
+    control.set(1);
+  } else if (amount == false) {
+    control.set(0);
   } else {
     control.value().inc(amount * Math.random());
   }
 }
 
+function toggleEffect(noteKey){
+  var idx = FX_KEYS.indexOf(noteKey);
+  var newState = ! fxStates[idx];
+  fxStates[idx] = newState;
+  modulateSingleEffect(idx, newState);
+  setLedStatus(newState, noteKey, 0x40);
+}
+
+function clearEffects() {
+  for (var i=0; i<FX_KEYS.length; i++) {
+    fxStates[i] = false;
+    modulateSingleEffect(i, -1);
+    setLedStatus(false, FX_KEYS[i], 0x00);
+    }
+}
 
 //--------------------------------- Interfaces --------------------------------//
 
