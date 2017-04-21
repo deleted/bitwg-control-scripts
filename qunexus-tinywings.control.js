@@ -45,6 +45,8 @@ var BLACK_KEY_VALUES = [
 ];
 var STOP = 68;
 var PLAY = 70;
+var FX_PLUS = 51;
+var FX_MINUS = 49;
 
 // Fill an array with -1's, which can be used to disable note pass-through
 // in MIDI handlers.
@@ -64,6 +66,7 @@ function indexedFunction(index, f) {
 // Otherwise bitwig will silently fail to load the script.
 var ledControlPort;
 var setLedStatus;
+var masterTrackControls;
 
 function init()
 {
@@ -75,11 +78,11 @@ function init()
 	host.getMidiInPort(1).setSysexCallback(onSysexPort2);
 	host.getMidiInPort(2).setSysexCallback(onSysexPort3);
 
-ledControlPort = host.getMidiOutPort(0);
-setLedStatus = function(onOff, keyNumber, brightness) {
-  var status = onOff ? 0x90 : 0x80;
-  ledControlPort.sendMidi(status, keyNumber, brightness);
-}
+  ledControlPort = host.getMidiOutPort(0);
+  setLedStatus = function(onOff, keyNumber, brightness) {
+    var status = onOff ? 0x90 : 0x80;
+    ledControlPort.sendMidi(status, keyNumber, brightness);
+  }
 
 	//-------- Note Inputs (see REF below for argument details
 	noteIn = host.getMidiInPort(0).createNoteInput("QuNexus Port 1");
@@ -114,7 +117,7 @@ setLedStatus = function(onOff, keyNumber, brightness) {
       (function(trackIdx){
         return function (slotIdx, hasContent) {
           if (hasContent) {
-            println("Track "+trackIdx+" Slot "+slotIdx+" has content.");
+            // println("Track "+trackIdx+" Slot "+slotIdx+" has content.");
             launcherClips[trackIdx].push(slotIdx);
           } else {
             var activeClips = launcherClips[trackIdx];
@@ -122,7 +125,7 @@ setLedStatus = function(onOff, keyNumber, brightness) {
               launcherClips[trackIdx] = activeClips.filter(function(x){ return x != slotIdx});
             }
           }
-          println(launcherClips[trackIdx]);
+          // println(launcherClips[trackIdx]);
         }
       })(trackIdx)
     );
@@ -140,11 +143,20 @@ setLedStatus = function(onOff, keyNumber, brightness) {
       })(trackIdx)
     );
 
+    //Master track macros.
+    masterTrackControls = getMasterMacros();
   }
 
-  // Turn on STOP and PLAY buttons so users know they are an affordance
-  setLedStatus(true, STOP, 0x40);
-  setLedStatus(true, PLAY, 0x40);
+  // Light up the black key affordances
+  var affordances = [
+    STOP,
+    PLAY,
+    FX_PLUS,
+    FX_MINUS
+  ];
+  for (var i=0; i<affordances.length; i++) {
+    setLedStatus(true, affordances[i], 0x40);
+  }
 }
 
 //--------------------------- MIDI Callbacks / Port ---------------------------//
@@ -161,7 +173,7 @@ function onMidiPort1(status, data1, data2)
     var velocity = data2;
     if (WHITE_KEY_VALUES.indexOf(note) >= 0) {
       var idx = WHITE_KEY_VALUES.indexOf(note);
-      println("Fetching track "+idx);
+      // println("Fetching track "+idx);
       var track = trackBank.getChannel(idx);
       if (track != null) {
         // track.playNote(note, velocity);
@@ -174,6 +186,11 @@ function onMidiPort1(status, data1, data2)
         playSomething();
       } else if (note == STOP) {
         stopAllClips();
+        modulateMasterFX(0);
+      } else if (note == FX_PLUS) {
+        modulateMasterFX(0.1);
+      } else if (note == FX_MINUS) {
+        modulateMasterFX(-0.1);
       }
     }
   }
@@ -304,6 +321,43 @@ function stopAllClips(){
   trackBank.getClipLauncherScenes().stop();
   transport.stop();
 }
+
+function getMasterMacros(){
+  var macros = [];
+  var PAGE_SIZE = 8;
+  var masterTrack = host.createMasterTrack(0);
+  var deviceBank = masterTrack.createDeviceBank(1);
+  var device = deviceBank.getDevice(0);
+  // var device = masterTrack.createCursorDevice('Primary');
+  var controlsPage = device.createCursorRemoteControlsPage(PAGE_SIZE);
+  var numControls = controlsPage.getParameterCount();
+  println(controlsPage.pageNames());
+  println("Discovered controls: "+numControls);
+
+  for (var i=0; i<numControls; i++) {
+    var control = controlsPage.getParameter(i);
+    macros.push(control);
+    // Dummy observer allows us to inspect the value later.
+    control.value().addValueObserver(100, function(){return true});
+  }
+  println('Set up macros: '+macros.length);
+  return macros;
+}
+
+function modulateMasterFX(amount){
+    var numControls = masterTrackControls.length;
+    for (var i=0; i<numControls; i++) {
+      var control = masterTrackControls[i];
+      var newVal;
+      if (amount == 0) {
+        newVal = 0;
+        control.set(newVal);
+      } else {
+        newVal = control.value().inc(amount * Math.random());
+      }
+    }
+}
+
 
 //--------------------------------- Interfaces --------------------------------//
 
