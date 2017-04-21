@@ -35,6 +35,8 @@ var clipsPlaying = [];
 // In instant gratification mode, LEDs change when you hit the button, instead of when clips actually start and stop
 var INSTANT_GRATIFICATION_MODE = true;
 var CLIP_LAUNCH_PROBABILITY = 0.30;
+var NUM_EFFECTS = 4;
+var FX_MODULATION_AMOUNT = 0.2;
 
 // Define a list of note numbers
 var WHITE_KEY_VALUES = [
@@ -45,8 +47,9 @@ var BLACK_KEY_VALUES = [
 ];
 var STOP = 68;
 var PLAY = 70;
-var FX_PLUS = 51;
-var FX_MINUS = 49;
+var FX_PLUS = null;
+var FX_MINUS = null;
+var FX_BUMPS = BLACK_KEY_VALUES.slice(0,NUM_EFFECTS);
 
 // Fill an array with -1's, which can be used to disable note pass-through
 // in MIDI handlers.
@@ -151,9 +154,9 @@ function init()
   var affordances = [
     STOP,
     PLAY,
-    FX_PLUS,
-    FX_MINUS
-  ];
+    // FX_PLUS,
+    // FX_MINUS
+  ] + FX_BUMPS;
   for (var i=0; i<affordances.length; i++) {
     setLedStatus(true, affordances[i], 0x40);
   }
@@ -191,6 +194,9 @@ function onMidiPort1(status, data1, data2)
         modulateMasterFX(0.2);
       } else if (note == FX_MINUS) {
         modulateMasterFX(-0.2);
+      } else if (FX_BUMPS.indexOf(note) >= 0) {
+        var idx = FX_BUMPS.indexOf(note);
+        modulateSingleEffect(idx, FX_MODULATION_AMOUNT);
       }
     }
   }
@@ -347,15 +353,18 @@ function getMasterMacros(){
 function modulateMasterFX(amount){
     var numControls = masterTrackControls.length;
     for (var i=0; i<numControls; i++) {
-      var control = masterTrackControls[i];
-      var newVal;
-      if (amount == 0) {
-        newVal = 0;
-        control.set(newVal);
-      } else {
-        newVal = control.value().inc(amount * Math.random());
-      }
+      modulateSingleEffect(i, amount);
     }
+}
+
+function modulateSingleEffect(idx, amount) {
+  var control = masterTrackControls[idx];
+  if (amount == 0) {
+    newVal = 0;
+    control.set(newVal);
+  } else {
+    control.value().inc(amount * Math.random());
+  }
 }
 
 
