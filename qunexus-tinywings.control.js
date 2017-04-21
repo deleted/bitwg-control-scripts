@@ -104,7 +104,7 @@ function init()
 	//arranger = host.createArranger(0);
 	//mixer = host.createMixer("perspective?",0);
 	transport = host.createTransport();
-	println("This is the QuNexus Script")
+	println("This is the QuNexus Script for Tiny Wings");
 
   trackBank = host.createMainTrackBank(WHITE_KEY_VALUES.length, 1, 6);
 
@@ -188,9 +188,9 @@ function onMidiPort1(status, data1, data2)
         stopAllClips();
         modulateMasterFX(0);
       } else if (note == FX_PLUS) {
-        modulateMasterFX(0.1);
+        modulateMasterFX(0.2);
       } else if (note == FX_MINUS) {
-        modulateMasterFX(-0.1);
+        modulateMasterFX(-0.2);
       }
     }
   }
