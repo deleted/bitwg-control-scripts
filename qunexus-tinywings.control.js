@@ -1,9 +1,3 @@
-/*
-
-Copyright 2014 Evan Bogunia_____evanbeta@keithmcmillen.com
-
-
-*/
 
 //Load the bitwig API, obviously.
 loadAPI(2);
